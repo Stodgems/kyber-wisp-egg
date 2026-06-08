@@ -13,16 +13,12 @@ mkdir -p "${MODULE_DIR}"
 mkdir -p "${WINEPREFIX}"
 mkdir -p /home/container/battlefront
 
-# Restore module files from copies saved at build time
-if [ ! -f "${MODULE_DIR}/vivoxsdk.dll" ]; then
-    cp /opt/kyber/vivoxsdk.dll "${MODULE_DIR}/vivoxsdk.dll"
-fi
-if [ ! -f "${MODULE_DIR}/Kyber.dll" ]; then
-    cp /opt/kyber/Kyber.dll "${MODULE_DIR}/Kyber.dll"
-fi
-if [ ! -f "${MODULE_DIR}/ca_root.pem" ]; then
-    cp /opt/kyber/ca_root.pem "${MODULE_DIR}/ca_root.pem"
-fi
+# Restore all module files from copies saved at build time
+for f in vivoxsdk.dll Kyber.dll ca_root.pem VanillaBundleAggregation.kb; do
+    if [ ! -f "${MODULE_DIR}/${f}" ]; then
+        cp "/opt/kyber/${f}" "${MODULE_DIR}/${f}"
+    fi
+done
 
 # Copy vivoxsdk.dll to game folder as the original entrypoint does
 cp "${MODULE_DIR}/vivoxsdk.dll" /home/container/battlefront/vivoxsdk.dll

@@ -5,7 +5,8 @@ USER root
 # Preserve all module files before replacing /root/.local with a symlink
 RUN cp /root/.local/share/kyber/module/vivoxsdk.dll /opt/kyber/vivoxsdk.dll \
     && cp /root/.local/share/kyber/module/Kyber.dll /opt/kyber/Kyber.dll \
-    && cp /root/.local/share/kyber/module/ca_root.pem /opt/kyber/ca_root.pem
+    && cp /root/.local/share/kyber/module/ca_root.pem /opt/kyber/ca_root.pem \
+    && cp /root/.local/share/kyber/module/VanillaBundleAggregation.kb /opt/kyber/VanillaBundleAggregation.kb
 
 # Create the container user
 RUN groupadd -g 999 container || true \
