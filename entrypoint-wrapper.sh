@@ -1,7 +1,6 @@
 #!/bin/bash
 # Entrypoint wrapper for Kyber WISP/Pterodactyl egg
-# Fully replaces the original entrypoint, skipping the vivoxsdk.dll cp
-# which fails when module files haven't been downloaded yet.
+# Fully replaces the original entrypoint.
 # WISP mounts at /home/container, /root/.local and /mnt/battlefront are symlinked there.
 
 set -uo pipefail
@@ -13,6 +12,16 @@ WINEPREFIX=/home/container/.local/share/maxima/wine/prefix
 mkdir -p "${MODULE_DIR}"
 mkdir -p "${WINEPREFIX}"
 mkdir -p /home/container/battlefront
+
+# Restore vivoxsdk.dll from the copy we saved at build time
+# This is needed because the original image bundles it in /root/.local
+# which we replaced with a symlink to /home/container/.local
+if [ ! -f "${MODULE_DIR}/vivoxsdk.dll" ]; then
+    cp /opt/kyber/vivoxsdk.dll "${MODULE_DIR}/vivoxsdk.dll"
+fi
+
+# Copy vivoxsdk.dll to game folder as the original entrypoint does
+cp "${MODULE_DIR}/vivoxsdk.dll" /home/container/battlefront/vivoxsdk.dll
 
 export WINEARCH=win64
 export WINEPREFIX

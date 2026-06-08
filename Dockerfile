@@ -2,9 +2,10 @@ FROM ghcr.io/armchairdevelopers/kyber-server:latest
 
 USER root
 
-# WISP mounts server files at /home/container and runs as user 999:999.
-# Symlink /root/.local and /mnt/battlefront to /home/container so WISP's
-# volume mount is used for all runtime data.
+# The bundled vivoxsdk.dll lives at /root/.local/share/kyber/module/vivoxsdk.dll
+# We need to preserve it before replacing /root/.local with a symlink.
+# Copy it to a safe location first, then restore it via the entrypoint wrapper.
+RUN cp /root/.local/share/kyber/module/vivoxsdk.dll /opt/kyber/vivoxsdk.dll
 
 # Create the container user
 RUN groupadd -g 999 container || true \
