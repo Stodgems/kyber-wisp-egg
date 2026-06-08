@@ -7,7 +7,12 @@ mkdir -p /home/container/.local/share/kyber/module
 mkdir -p /home/container/.local/share/maxima/wine/prefix
 mkdir -p /home/container/battlefront
 
-# Force 64-bit Wine prefix - SWBF2 is a 64-bit executable
+# Copy module files into the game directory so Wine can find them
+# as DLL dependencies when injecting Kyber.dll
+mkdir -p /home/container/battlefront/
+cp -n /home/container/.local/share/kyber/module/vivoxsdk.dll /home/container/battlefront/vivoxsdk.dll 2>/dev/null || true
+
+# Force 64-bit Wine prefix
 export WINEARCH=win64
 export WINEPREFIX=/home/container/.local/share/maxima/wine/prefix
 
