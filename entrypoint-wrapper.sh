@@ -7,5 +7,9 @@ mkdir -p /home/container/.local/share/kyber/module
 mkdir -p /home/container/.local/share/maxima/wine/prefix
 mkdir -p /home/container/battlefront
 
+# Force 64-bit Wine prefix - SWBF2 is a 64-bit executable
+export WINEARCH=win64
+export WINEPREFIX=/home/container/.local/share/maxima/wine/prefix
+
 # Hand off to the original Kyber entrypoint
 exec /opt/kyber/entrypoint.sh "$@"
