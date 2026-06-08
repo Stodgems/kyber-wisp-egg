@@ -2,9 +2,10 @@ FROM ghcr.io/armchairdevelopers/kyber-server:latest
 
 USER root
 
-# Preserve both module files before replacing /root/.local with a symlink
+# Preserve all module files before replacing /root/.local with a symlink
 RUN cp /root/.local/share/kyber/module/vivoxsdk.dll /opt/kyber/vivoxsdk.dll \
-    && cp /root/.local/share/kyber/module/Kyber.dll /opt/kyber/Kyber.dll
+    && cp /root/.local/share/kyber/module/Kyber.dll /opt/kyber/Kyber.dll \
+    && cp /root/.local/share/kyber/module/ca_root.pem /opt/kyber/ca_root.pem
 
 # Create the container user
 RUN groupadd -g 999 container || true \

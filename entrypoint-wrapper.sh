@@ -20,6 +20,9 @@ fi
 if [ ! -f "${MODULE_DIR}/Kyber.dll" ]; then
     cp /opt/kyber/Kyber.dll "${MODULE_DIR}/Kyber.dll"
 fi
+if [ ! -f "${MODULE_DIR}/ca_root.pem" ]; then
+    cp /opt/kyber/ca_root.pem "${MODULE_DIR}/ca_root.pem"
+fi
 
 # Copy vivoxsdk.dll to game folder as the original entrypoint does
 cp "${MODULE_DIR}/vivoxsdk.dll" /home/container/battlefront/vivoxsdk.dll
