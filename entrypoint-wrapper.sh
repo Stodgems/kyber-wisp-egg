@@ -24,7 +24,7 @@ WINEPREFIX="${WINEPREFIX}" /home/kyber/wine/bin/wine64 winecfg || true
 echo "Starting KYBER Server named '${KYBER_SERVER_NAME:-unnamed}'"
 
 args=(
-  /home/kyber/kyber_cli start_server
+  /opt/kyber/kyber_cli start_server
   --show-console
   --credentials="${MAXIMA_CREDENTIALS}"
   --token "${KYBER_TOKEN}"
