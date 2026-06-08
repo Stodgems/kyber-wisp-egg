@@ -97,6 +97,16 @@
             "user_editable": true,
             "rules": "required|string",
             "field_type": "text"
+        },
+        {
+            "name": "Mod Folder",
+            "description": "Path to the mod folder inside the container. Defaults to /home/container/mods. Place your .kmodcollection file and mod files in the mods folder via the WISP file manager. Leave blank to disable mod support.",
+            "env_variable": "KYBER_MOD_FOLDER",
+            "default_value": "/home/container/mods",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
         }
     ]
 }

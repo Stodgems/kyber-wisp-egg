@@ -7,11 +7,13 @@ set -uo pipefail
 
 MODULE_DIR=/home/container/.local/share/kyber/module
 WINEPREFIX=/home/container/.local/share/maxima/wine/prefix
+MODS_DIR=/home/container/mods
 
 # Create required directories
 mkdir -p "${MODULE_DIR}"
 mkdir -p "${WINEPREFIX}"
 mkdir -p /home/container/battlefront
+mkdir -p "${MODS_DIR}"
 
 # Restore all module files from copies saved at build time
 for f in vivoxsdk.dll Kyber.dll ca_root.pem VanillaBundleAggregation.kb; do
@@ -41,6 +43,12 @@ args=(
   --module-path="${MODULE_DIR}"
   --verbose
 )
+
+# Add mod folder if KYBER_MOD_FOLDER is set
+if [[ -n "${KYBER_MOD_FOLDER:-}" ]]; then
+    args+=(--mod-folder="${KYBER_MOD_FOLDER}")
+fi
+
 args+=("$@")
 
 exec "${args[@]}"
