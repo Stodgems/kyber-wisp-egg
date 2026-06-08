@@ -3,19 +3,19 @@ FROM ghcr.io/armchairdevelopers/kyber-server:latest
 USER root
 
 # WISP mounts server files at /home/container and runs as user 999:999.
-# The Kyber entrypoint expects /root/.local and /mnt/battlefront.
-# We symlink both to /home/container so WISP's volume mount is used.
+# Symlink /root/.local and /mnt/battlefront to /home/container so WISP's
+# volume mount is used for all runtime data.
 
 # Create the container user
 RUN groupadd -g 999 container || true \
     && useradd -u 999 -g 999 -d /home/container -s /bin/bash container || true \
     && mkdir -p /home/container
 
-# Remove existing /root/.local if present and replace with symlink
+# Replace /root/.local with a symlink to /home/container/.local
 RUN rm -rf /root/.local \
     && ln -s /home/container/.local /root/.local
 
-# Remove existing /mnt/battlefront and replace with symlink  
+# Replace /mnt/battlefront with a symlink to /home/container/battlefront
 RUN mkdir -p /mnt \
     && rm -rf /mnt/battlefront \
     && ln -s /home/container/battlefront /mnt/battlefront
