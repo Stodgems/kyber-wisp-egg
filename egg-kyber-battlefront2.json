@@ -1,0 +1,102 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-06-08T00:00:00+00:00",
+    "name": "Kyber - Star Wars Battlefront II",
+    "author": "vestmar@dominion.gg",
+    "description": "Hosts a Star Wars Battlefront II (2017) dedicated server using a custom Kyber Docker image with WISP/Pterodactyl permission fixes applied.\n\nThe install script will automatically download the Kyber CLI and SWBF2 game files using your EA token.\n\nCustom image: https://github.com/Stodgems/kyber-wisp-egg\nKyber GitHub: https://github.com/ArmchairDevelopers/Kyber\nKyber Docs:   https://docs.kyber.gg",
+    "features": null,
+    "docker_images": {
+        "Kyber Server (WISP Fixed)": "ghcr.io/stodgems/kyber-wisp-egg:latest"
+    },
+    "file_denylist": [],
+    "startup": "--module-path=/home/container/.local/share/kyber/module",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Kyber server is running\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\r\n# -------------------------------------------------------\r\n# Kyber BF2 Dedicated Server - Install Script\r\n# Pterodactyl / WISP Egg\r\n#\r\n# What this script does:\r\n#   1. Downloads and installs the Kyber CLI\r\n#   2. Sets up librust_lib.so shared library\r\n#   3. Sets up maxima-bootstrap binary\r\n#   4. Pre-creates .local directory structure\r\n#   5. Downloads SWBF2 game files via kyber_cli download_game\r\n# -------------------------------------------------------\r\n\r\nset -e\r\n\r\napt-get update -y\r\napt-get install -y curl unzip jq\r\n\r\necho \"-------------------------------------------------\"\r\necho \" Kyber BF2 Server - Installation\"\r\necho \"-------------------------------------------------\"\r\n\r\n# --- 1. Download Kyber CLI ---\r\necho \"[1/5] Downloading Kyber CLI...\"\r\ncd /tmp\r\ncurl -sSL -o kyber-cli.zip \"https://api.prod.kyber.gg/download/kyber-cli-linux64.zip?branch=main\"\r\nunzip -o kyber-cli.zip -d /tmp/kyber-cli\r\ncp /tmp/kyber-cli/kyber_cli /usr/local/bin/kyber_cli\r\nchmod +x /usr/local/bin/kyber_cli\r\necho \"  kyber_cli installed.\"\r\n\r\n# --- 2. Set up librust_lib.so ---\r\necho \"[2/5] Setting up librust_lib.so...\"\r\nif [ -f /tmp/kyber-cli/librust_lib.so ]; then\r\n    cp /tmp/kyber-cli/librust_lib.so /usr/local/lib/librust_lib.so\r\n    ldconfig\r\n    echo \"  librust_lib.so installed.\"\r\nelse\r\n    echo \"  WARNING: librust_lib.so not found.\"\r\nfi\r\n\r\n# --- 3. Set up maxima-bootstrap ---\r\necho \"[3/5] Setting up maxima-bootstrap...\"\r\nmkdir -p /mnt/server/.local/share/maxima\r\nif [ -f /tmp/kyber-cli/maxima-bootstrap ]; then\r\n    cp /tmp/kyber-cli/maxima-bootstrap /mnt/server/.local/share/maxima/maxima-bootstrap\r\n    chmod +x /mnt/server/.local/share/maxima/maxima-bootstrap\r\n    echo \"  maxima-bootstrap installed.\"\r\nelse\r\n    echo \"  WARNING: maxima-bootstrap not found.\"\r\nfi\r\n\r\n# --- 4. Pre-create .local directory structure ---\r\necho \"[4/5] Pre-creating .local directory structure...\"\r\nmkdir -p /mnt/server/.local/share/kyber/module\r\ntouch /mnt/server/.local/share/kyber/module/vivoxsdk.dll\r\nchmod -R 777 /mnt/server/.local\r\necho \"  Done.\"\r\n\r\n# --- 5. Download SWBF2 game files ---\r\necho \"[5/5] Downloading SWBF2 game files...\"\r\necho \"  This may take a while - the game is ~50-90 GB.\"\r\n\r\nif [ -z \"${EA_TOKEN}\" ]; then\r\n    echo \"\"\r\n    echo \"  ERROR: EA_TOKEN is not set!\"\r\n    echo \"  Set it in the Startup tab before running the installer.\"\r\n    exit 1\r\nfi\r\n\r\nmkdir -p /mnt/server/battlefront\r\n\r\nkyber_cli download_game -p /mnt/server/battlefront -t \"${EA_TOKEN}\" &\r\nDL_PID=$!\r\necho \"  Download started (PID: $DL_PID). Monitoring for completion...\"\r\n\r\nwhile kill -0 $DL_PID 2>/dev/null; do\r\n    if [ -f \"/mnt/server/battlefront/starwarsbattlefrontii.exe\" ] || \\\r\n       [ -f \"/mnt/server/battlefront/__Installer/installerdata.xml\" ] || \\\r\n       [ -d \"/mnt/server/battlefront/Data\" ]; then\r\n        echo \"  Game files detected - download complete. Terminating...\"\r\n        kill $DL_PID 2>/dev/null || true\r\n        wait $DL_PID 2>/dev/null || true\r\n        break\r\n    fi\r\n    sleep 10\r\ndone\r\n\r\nif [ -d \"/mnt/server/battlefront/Data\" ] || [ -f \"/mnt/server/battlefront/starwarsbattlefrontii.exe\" ]; then\r\n    echo \"  Game files downloaded successfully.\"\r\nelse\r\n    echo \"  WARNING: Download may not have completed. Check /mnt/server/battlefront.\"\r\nfi\r\n\r\n# Cleanup\r\nrm -rf /tmp/kyber-cli /tmp/kyber-cli.zip\r\n\r\necho \"\"\r\necho \"-------------------------------------------------\"\r\necho \" Installation complete!\"\r\necho \" Game files: /mnt/server/battlefront\"\r\necho \"-------------------------------------------------\"",
+            "container": "ghcr.io/parkervcp/installers:debian",
+            "entrypoint": "/bin/bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "EA Token (Install Only)",
+            "description": "Your EA token used ONLY during installation to download SWBF2 game files. Generate with 'kyber_cli get_ea_token'. Expires periodically.",
+            "env_variable": "EA_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "EA / Origin Credentials",
+            "description": "Your EA account email and password in the format email:password. Used at runtime by Kyber Maxima. Use a dedicated EA account.",
+            "env_variable": "MAXIMA_CREDENTIALS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Kyber Token",
+            "description": "Your Kyber authentication token. Never expires. Obtain with 'kyber_cli get_kyber_token' or from the Kyber Launcher.",
+            "env_variable": "KYBER_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Server Name",
+            "description": "The name of your server as it appears in the Kyber server browser.",
+            "env_variable": "KYBER_SERVER_NAME",
+            "default_value": "My Kyber Server",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Server Description",
+            "description": "A short description shown in the Kyber server browser. Optional.",
+            "env_variable": "KYBER_SERVER_DESCRIPTION",
+            "default_value": "A Kyber BF2 dedicated server.",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:256",
+            "field_type": "text"
+        },
+        {
+            "name": "Max Players",
+            "description": "Maximum number of players. Hard cap from Kyber is 40.",
+            "env_variable": "KYBER_SERVER_MAX_PLAYERS",
+            "default_value": "40",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|integer|min:2|max:40",
+            "field_type": "text"
+        },
+        {
+            "name": "Map Rotation (Base64)",
+            "description": "Base64-encoded map rotation string. Generate via Kyber Launcher: Host tab > build rotation > Export.",
+            "env_variable": "KYBER_MAP_ROTATION",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        }
+    ]
+}
