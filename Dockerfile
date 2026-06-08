@@ -2,10 +2,9 @@ FROM ghcr.io/armchairdevelopers/kyber-server:latest
 
 USER root
 
-# The bundled vivoxsdk.dll lives at /root/.local/share/kyber/module/vivoxsdk.dll
-# We need to preserve it before replacing /root/.local with a symlink.
-# Copy it to a safe location first, then restore it via the entrypoint wrapper.
-RUN cp /root/.local/share/kyber/module/vivoxsdk.dll /opt/kyber/vivoxsdk.dll
+# Preserve both module files before replacing /root/.local with a symlink
+RUN cp /root/.local/share/kyber/module/vivoxsdk.dll /opt/kyber/vivoxsdk.dll \
+    && cp /root/.local/share/kyber/module/Kyber.dll /opt/kyber/Kyber.dll
 
 # Create the container user
 RUN groupadd -g 999 container || true \

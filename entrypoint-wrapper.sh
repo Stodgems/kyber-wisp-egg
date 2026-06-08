@@ -13,11 +13,12 @@ mkdir -p "${MODULE_DIR}"
 mkdir -p "${WINEPREFIX}"
 mkdir -p /home/container/battlefront
 
-# Restore vivoxsdk.dll from the copy we saved at build time
-# This is needed because the original image bundles it in /root/.local
-# which we replaced with a symlink to /home/container/.local
+# Restore module files from copies saved at build time
 if [ ! -f "${MODULE_DIR}/vivoxsdk.dll" ]; then
     cp /opt/kyber/vivoxsdk.dll "${MODULE_DIR}/vivoxsdk.dll"
+fi
+if [ ! -f "${MODULE_DIR}/Kyber.dll" ]; then
+    cp /opt/kyber/Kyber.dll "${MODULE_DIR}/Kyber.dll"
 fi
 
 # Copy vivoxsdk.dll to game folder as the original entrypoint does
