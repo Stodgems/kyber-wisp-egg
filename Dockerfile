@@ -2,15 +2,26 @@ FROM ghcr.io/armchairdevelopers/kyber-server:latest
 
 USER root
 
-# Pre-create the entire .local structure at build time with open permissions.
-# WISP/Pterodactyl runs containers as a non-root user, so /root is not writable
-# at runtime. Creating these directories here ensures they exist and are
-# accessible regardless of which user the container runs as.
-RUN mkdir -p /root/.local/share/kyber/module \
-    && mkdir -p /root/.local/share/maxima \
-    && touch /root/.local/share/kyber/module/vivoxsdk.dll \
-    && chmod -R 777 /root \
-    && chmod -R 777 /root/.local
+# WISP mounts server files at /home/container and runs as user 999:999.
+# The Kyber entrypoint expects /root/.local and /mnt/battlefront.
+# We symlink both to /home/container so WISP's volume mount is used.
+
+# Create the container user
+RUN groupadd -g 999 container || true \
+    && useradd -u 999 -g 999 -d /home/container -s /bin/bash container || true \
+    && mkdir -p /home/container
+
+# Remove existing /root/.local if present and replace with symlink
+RUN rm -rf /root/.local \
+    && ln -s /home/container/.local /root/.local
+
+# Remove existing /mnt/battlefront and replace with symlink  
+RUN mkdir -p /mnt \
+    && rm -rf /mnt/battlefront \
+    && ln -s /home/container/battlefront /mnt/battlefront
+
+# Make /root accessible to user 999
+RUN chmod 755 /root
 
 # Copy wrapper entrypoint
 COPY entrypoint-wrapper.sh /opt/kyber/entrypoint-wrapper.sh
