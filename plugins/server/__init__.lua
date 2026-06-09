@@ -1,19 +1,23 @@
 -- XLServerUtils Plugin
 -- Features:
---   1. Bot difficulty fix - sets aimNoiseScale on bot spawn (IOI V7 Fix)
+--   1. Bot difficulty fix - sets AimNoiseScale on Level:Loaded (BF2+ compatible)
 --   2. Auto-start game once minimum player count is reached
+--   3. 16v16 bot balancing via AutoPlayers settings
+
+local Timer = require "common/timer".Timer
 
 -- -------------------------------------------------------
 -- Configuration
 -- -------------------------------------------------------
 
-local aimNoiseScale <const> = 9
+-- Bot difficulty via AimNoiseScale:
+-- 0 = Master, 3 = Knight, 6 = Hard, 9 = Medium, 12 = Easy
+local desiredDifficulty <const> = 9
 
--- Minimum number of human players required to auto-start the game.
 local minPlayersToStart <const> = 4
-
--- How often (in seconds) to check if we should auto-start.
 local checkIntervalSeconds <const> = 5
+local maxBotsPerTeam <const> = 16
+local botApplyDelaySeconds <const> = 5
 
 -- -------------------------------------------------------
 -- State
@@ -21,86 +25,135 @@ local checkIntervalSeconds <const> = 5
 
 local hasAutoStarted = false
 local isLevelLoaded = false
+local hasServerInitialized = false
 
 -- -------------------------------------------------------
--- Feature 1: Bot Difficulty Fix (IOI V7)
--- Sets aimNoiseScale each time a bot spawns so the
--- difficulty setting actually takes effect.
+-- Helpers
 -- -------------------------------------------------------
 
-EventManager.Listen("ServerPlayer:Spawned", function(player)
-    if player == nil then
+local function getHumanCountPerTeam()
+    local counts = {0, 0}
+    local players = PlayerManager.GetPlayers()
+    for _, player in ipairs(players) do
+        if player.isBot then
+            goto continue
+        end
+        local team = player.team
+        if team == 1 or team == 2 then
+            counts[team] = counts[team] + 1
+        end
+        ::continue::
+    end
+    return counts
+end
+
+local function getHumanPlayerCount()
+    local counts = getHumanCountPerTeam()
+    return counts[1] + counts[2]
+end
+
+-- -------------------------------------------------------
+-- Feature 3: 16v16 Bot Balancing
+-- -------------------------------------------------------
+
+local function applyBotCounts()
+    if not hasServerInitialized or not isLevelLoaded then
         return
     end
 
-    if player.isBot then
-        local settings = Console.GetSettings("AutoPlayers")
-        if settings ~= nil then
-            settings.aimNoiseScale = aimNoiseScale
-        end
+    local settings = Console.GetSettings("AutoPlayers")
+    if settings == nil then
+        print("[XLServerUtils] AutoPlayers settings not found.")
+        return
     end
-end)
+
+    local humanCounts = getHumanCountPerTeam()
+    local botsTeam1 = math.max(0, maxBotsPerTeam - humanCounts[1])
+    local botsTeam2 = math.max(0, maxBotsPerTeam - humanCounts[2])
+
+    settings.forceFillGameplayBotsTeam1 = botsTeam1
+    settings.forceFillGameplayBotsTeam2 = botsTeam2
+
+    print(string.format("[XLServerUtils] Bots: Team1=%d (humans=%d), Team2=%d (humans=%d)",
+        botsTeam1, humanCounts[1], botsTeam2, humanCounts[2]))
+end
 
 -- -------------------------------------------------------
 -- Feature 2: Auto-Start
--- Counts human players and forces the game to start once
--- minPlayersToStart is reached. This is needed for XL
--- CO-OP servers where the default 4-player start threshold
--- causes the game to never start with larger player counts.
 -- -------------------------------------------------------
 
-local function getHumanPlayerCount()
-    local count = 0
-    local players = PlayerManager.GetPlayers()
-    for _, player in ipairs(players) do
-        if not player.isBot then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function tryAutoStart()
-    -- Only attempt once per level load
-    if hasAutoStarted then
-        return
-    end
-
-    -- Don't run before a level is loaded
-    if not isLevelLoaded then
+function tryAutoStart()
+    if hasAutoStarted or not isLevelLoaded or not hasServerInitialized then
         return
     end
 
     local humanCount = getHumanPlayerCount()
-
     if humanCount >= minPlayersToStart then
-        print(string.format("[XLServerUtils] %d human players present, auto-starting game.", humanCount))
-        Console.Execute("Kyber.Broadcast **KYBER:** Auto-starting game with " .. humanCount .. " players.")
+        print(string.format("[XLServerUtils] %d players present, auto-starting.", humanCount))
+        Console.Execute("Kyber.Broadcast **KYBER:** Auto-starting with " .. humanCount .. " players.")
 
-        -- Force the game to start by setting the minimum player count to 1
-        -- and triggering a start check
         local wsSettings = Console.GetSettings("Whiteshark")
         if wsSettings ~= nil then
             wsSettings.minNumberOfPlayers = 1
         end
 
-        -- Also execute the start command directly
-        Console.Execute("wS.minNumberOfPlayers 1")
         Console.Execute("Kyber.startgame")
-
         hasAutoStarted = true
+
+        -- Apply bots 5 seconds after force-starting
+        Timer.new(botApplyDelaySeconds, function(timer)
+            print("[XLServerUtils] Applying bot counts after auto-start delay.")
+            applyBotCounts()
+            timer:cancel()
+        end)
     end
 end
 
--- Periodic check service
+-- -------------------------------------------------------
+-- Events
+-- -------------------------------------------------------
+
+EventManager.Listen("Server:Init", function()
+    hasServerInitialized = true
+    print("[XLServerUtils] Plugin initialized.")
+    print(string.format("[XLServerUtils] difficulty=%d, minPlayers=%d, maxBotsPerTeam=%d",
+        desiredDifficulty, minPlayersToStart, maxBotsPerTeam))
+end)
+
+EventManager.Listen("Level:Loaded", function(levelName, gameModeId)
+    print(string.format("[XLServerUtils] Level loaded: %s (%s).", levelName, gameModeId))
+    hasAutoStarted = false
+    isLevelLoaded = true
+
+    -- Set bot difficulty on every level load (BF2+ compatible approach)
+    Console.Execute("AutoPlayers.AimNoiseScale " .. desiredDifficulty)
+    print("[XLServerUtils] Bot difficulty set to: " .. desiredDifficulty)
+end)
+
+EventManager.Listen("ServerPlayer:Joined", function(player)
+    if player == nil or player.isBot then
+        return
+    end
+    if hasAutoStarted then
+        applyBotCounts()
+    end
+    tryAutoStart()
+end)
+
+EventManager.Listen("ServerPlayer:Disconnect", function(player)
+    if player == nil or player.isBot then
+        return
+    end
+    if hasAutoStarted then
+        applyBotCounts()
+    end
+end)
+
+-- Periodic auto-start check
 local AutoStartService = {
     elapsed = 0,
-
     update = function(self, deltaSecs)
-        if hasAutoStarted then
-            return
-        end
-
+        if hasAutoStarted then return end
         self.elapsed = self.elapsed + deltaSecs
         if self.elapsed >= checkIntervalSeconds then
             self.elapsed = self.elapsed - checkIntervalSeconds
@@ -110,26 +163,3 @@ local AutoStartService = {
 }
 
 EventManager.Listen("Server:UpdatePre", AutoStartService.update, AutoStartService)
-
--- Reset auto-start flag when a new level loads
-EventManager.Listen("Level:Loaded", function(levelName, gameModeId)
-    print(string.format("[XLServerUtils] Level loaded: %s (%s). Resetting auto-start.", levelName, gameModeId))
-    hasAutoStarted = false
-    isLevelLoaded = true
-end)
-
--- Also try to start immediately when a player joins
--- in case the periodic check hasn't fired yet
-EventManager.Listen("ServerPlayer:Joined", function(player)
-    if player == nil or player.isBot then
-        return
-    end
-
-    tryAutoStart()
-end)
-
-EventManager.Listen("Server:Init", function()
-    print("[XLServerUtils] Plugin initialized.")
-    print(string.format("[XLServerUtils] Bot aimNoiseScale: %.2f", aimNoiseScale))
-    print(string.format("[XLServerUtils] Auto-start threshold: %d players", minPlayersToStart))
-end)
