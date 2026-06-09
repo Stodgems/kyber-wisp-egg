@@ -107,6 +107,16 @@
             "user_editable": true,
             "rules": "nullable|string",
             "field_type": "text"
+        },
+        {
+            "name": "Plugins Path",
+            "description": "Path to the plugins folder inside the container. Defaults to /home/container/plugins. Place your Kyber plugin files here via the WISP file manager. Leave blank to disable plugin support.",
+            "env_variable": "KYBER_SERVER_PLUGINS_PATH",
+            "default_value": "/home/container/plugins",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
         }
     ]
 }
