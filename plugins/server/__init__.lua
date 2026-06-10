@@ -90,6 +90,8 @@ function tryAutoStart()
     local humanCount = getHumanPlayerCount()
     if humanCount >= minPlayersToStart then
         print(string.format("[XLServerUtils] %d players present, auto-starting.", humanCount))
+        -- Set flag immediately so the countdown cannot be triggered again
+        hasAutoStarted = true
         Console.Execute("Kyber.Broadcast **KYBER:** Game starting in 10 seconds! Choose your class!")
 
         -- 10 second countdown before starting
