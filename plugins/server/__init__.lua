@@ -90,21 +90,29 @@ function tryAutoStart()
     local humanCount = getHumanPlayerCount()
     if humanCount >= minPlayersToStart then
         print(string.format("[XLServerUtils] %d players present, auto-starting.", humanCount))
-        Console.Execute("Kyber.Broadcast **KYBER:** Auto-starting with " .. humanCount .. " players.")
+        Console.Execute("Kyber.Broadcast **KYBER:** Game starting in 10 seconds! Choose your class!")
 
-        local wsSettings = Console.GetSettings("Whiteshark")
-        if wsSettings ~= nil then
-            wsSettings.minNumberOfPlayers = 1
-        end
+        -- 10 second countdown before starting
+        Timer.new(5, function(t1)
+            Console.Execute("Kyber.Broadcast **KYBER:** Starting in 5 seconds!")
+            t1:cancel()
 
-        Console.Execute("Kyber.startgame")
-        hasAutoStarted = true
+            Timer.new(5, function(t2)
+                local wsSettings = Console.GetSettings("Whiteshark")
+                if wsSettings ~= nil then
+                    wsSettings.minNumberOfPlayers = 1
+                end
 
-        -- Apply bots 5 seconds after force-starting
-        Timer.new(botApplyDelaySeconds, function(timer)
-            print("[XLServerUtils] Applying bot counts after auto-start delay.")
-            applyBotCounts()
-            timer:cancel()
+                Console.Execute("Kyber.startgame")
+                t2:cancel()
+
+                -- Apply bots 5 seconds after the game starts
+                Timer.new(botApplyDelaySeconds, function(t3)
+                    print("[XLServerUtils] Applying bot counts after auto-start delay.")
+                    applyBotCounts()
+                    t3:cancel()
+                end)
+            end)
         end)
     end
 end
